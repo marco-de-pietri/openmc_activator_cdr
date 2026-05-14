@@ -17,12 +17,25 @@ set -euo pipefail
 # ---------------------------
 # Configuration
 # ---------------------------
-ENV_NAME="conda-activator-openmc" # Name of the conda environment
+ENV_NAME="openmc-activator-cdr" # Name of the conda environment
 GH_PROFILE="openmc-dev"
 PY_VER="3.14"
+PROJECT_DIR_NAME="openmc_activator_cdr"
+REQUIRED_RUN_DIR="/$PROJECT_DIR_NAME/scripts"
 
-# Directory where this script was launched
-ROOT_DIR="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+RUN_ARTIFACTS_DIR="$REPO_ROOT/run_artifacts"
+OPENMC_SRC_DIR="$RUN_ARTIFACTS_DIR/openmc"
+CURRENT_DIR="$(pwd -P)"
+
+if [[ "$(basename "$CURRENT_DIR")" != "scripts" ]] || [[ "$(basename "$(dirname "$CURRENT_DIR")")" != "$PROJECT_DIR_NAME" ]]; then
+  echo "Error: this script must be run from $REQUIRED_RUN_DIR" >&2
+  echo "Run: cd $REQUIRED_RUN_DIR && ./$(basename "$0")" >&2
+  exit 1
+fi
+
+mkdir -p "$RUN_ARTIFACTS_DIR"
 
 # ---------------------------
 # Create conda environment
@@ -49,9 +62,10 @@ echo "Cloning OpenMC (develop branch)"
 
 git clone --recurse-submodules \
   --branch develop \
-  https://github.com/$GH_PROFILE/openmc.git
+  "https://github.com/$GH_PROFILE/openmc.git" \
+  "$OPENMC_SRC_DIR"
 
-cd openmc
+cd "$OPENMC_SRC_DIR"
 
 git checkout develop
 git submodule update --init --recursive
@@ -92,16 +106,16 @@ conda activate "$ENV_NAME"
 # Download nuclear data locally
 # ---------------------------
 
-cd "$ROOT_DIR"
+cd "$RUN_ARTIFACTS_DIR"
 
 echo "Running TENDL downloader"
 
 TENDL_RELEASE="2017"
-TENDL_HDF5="$ROOT_DIR/tendl-${TENDL_RELEASE}-hdf5"
-TENDL_ACE="$ROOT_DIR/tendl-${TENDL_RELEASE}-ace"
+TENDL_HDF5="$RUN_ARTIFACTS_DIR/tendl-${TENDL_RELEASE}-hdf5"
+TENDL_ACE="$RUN_ARTIFACTS_DIR/tendl-${TENDL_RELEASE}-ace"
 TENDL_XS="$TENDL_HDF5/cross_sections.xml"
 
-python "$ROOT_DIR/scripts/download-tendl.py" \
+python "$SCRIPT_DIR/download-tendl.py" \
   --download \
   --extract \
   --release "$TENDL_RELEASE" \
@@ -135,10 +149,18 @@ echo "Verifying installation"
 
 python - <<EOF
 import os
+from importlib import metadata
+
 import openmc
 import numba
 
-print("openmc:", openmc.__version__)
+try:
+    openmc_version = getattr(openmc, "__version__", None) or metadata.version("openmc")
+except metadata.PackageNotFoundError:
+    openmc_version = "unknown"
+
+print("openmc:", openmc_version)
+print("openmc module:", getattr(openmc, "__file__", "unknown"))
 print("numba:", numba.__version__)
 print("OPENMC_CROSS_SECTIONS:", os.environ.get("OPENMC_CROSS_SECTIONS"))
 EOF
