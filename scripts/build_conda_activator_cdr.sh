@@ -95,8 +95,10 @@ pip install PySide6
 pip install openmc-plotter --no-deps
 pip install neutronics_material_maker
 pip install plotly
+pip install pymatviz
 pip install notebook
 pip install ipykernel
+pip install jupytext
 pip install git+https://github.com/fispact/pypact
 
 # Reload environment so variables take effect in this shell

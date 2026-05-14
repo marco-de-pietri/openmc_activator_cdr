@@ -143,8 +143,9 @@ def read_output(
     # add all the isos
     for metric in metric_list:
         metric_dict[metric]['meta_total'] = []
-        for iso in nuclides:
-            metric_dict[metric][iso] = []
+        if metric != 'contact_dose_rate':
+            for iso in nuclides:
+                metric_dict[metric][iso] = []
     for mat in materials:
         for metric in metric_dict.keys():
             if metric == 'mass':
@@ -155,6 +156,11 @@ def read_output(
                 td = mat.get_decay_heat('W', by_nuclide=True)
             elif metric == 'activity':
                 td = mat.get_activity('Bq', by_nuclide=True)
+            elif metric == 'contact_dose_rate':
+                metric_dict[metric]['meta_total'].append(float(
+                    mat.get_photon_contact_dose_rate(dose_quantity='absorbed-air')
+                ))
+                continue
             else:
                 raise ValueError('Invalid metric ' + metric)
             
@@ -167,6 +173,8 @@ def read_output(
 
     # Clean up the dictionary by removing entries with all zeros
     for metric in metric_dict.keys():
+        if metric == 'contact_dose_rate':
+            continue
         for iso in nuclides:                
             # Check if all values are zeros
             if all(abs(value) == 0.0 for value in metric_dict[metric][iso]):
