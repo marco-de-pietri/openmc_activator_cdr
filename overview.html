@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenMC Activator Results</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --border: #d8dde6;
+      --text: #17202a;
+      --muted: #5d6878;
+      --accent: #0b5cad;
+      --accent-soft: #e8f1fb;
+      --surface: #fbfcfd;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 650;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 650;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px;
+      min-height: calc(100vh - 104px);
+    }
+
+    aside,
+    .workspace {
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    aside {
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .workspace {
+      overflow: hidden;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .stat,
+    .tile,
+    .experiment-row {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+
+    .stat {
+      padding: 10px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 20px;
+    }
+
+    .nav-group {
+      margin-top: 18px;
+    }
+
+    .nav-group + .nav-group {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .nav-item:hover,
+    .nav-item:focus-visible,
+    .tile:hover,
+    .tile:focus-visible {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .nav-name,
+    .tile-name,
+    .experiment-name {
+      overflow-wrap: anywhere;
+    }
+
+    .muted,
+    .metric {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    button,
+    a.button {
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      padding: 6px 10px;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button.secondary,
+    a.button.secondary {
+      background: white;
+      color: var(--accent);
+    }
+
+    .workspace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .workspace-actions,
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .workspace-body {
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      min-width: 0;
+    }
+
+    .panel-stack {
+      min-width: 0;
+    }
+
+    .panel + .panel {
+      margin-top: 20px;
+    }
+
+    iframe {
+      width: 100%;
+      border: 0;
+      background: white;
+    }
+
+    .periodic-frame {
+      min-height: 560px;
+    }
+
+    .plot-frame {
+      min-height: 720px;
+    }
+
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .tile {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .tile-name {
+      font-size: 18px;
+      font-weight: 650;
+    }
+
+    .experiment-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .experiment-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+    }
+
+    .experiment-name {
+      font-weight: 600;
+    }
+
+    .empty {
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-width: 760px;
+    }
+
+    code {
+      background: #eef2f7;
+      border-radius: 4px;
+      padding: 2px 5px;
+    }
+
+    @media (max-width: 1100px) {
+      .overview-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .periodic-frame {
+        min-height: 480px;
+      }
+
+      .plot-frame {
+        min-height: 560px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 20px 16px 14px;
+      }
+
+      main {
+        padding: 10px;
+      }
+
+      .workspace-header,
+      .experiment-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OpenMC Activator Results</h1>
+    <p id="subtitle">Loading generated results...</p>
+  </header>
+
+  <main id="app">
+    <div class="empty">
+      <h2>No Results Loaded</h2>
+      <p>Waiting for <code>results/manifest.js</code>.</p>
+    </div>
+  </main>
+
+  <script>
+    const state = {
+      manifest: null,
+      materialsByName: new Map(),
+      app: null,
+      workspace: null,
+    };
+
+    function groupByMaterial(results) {
+      return results.reduce((groups, item) => {
+        if (!groups[item.material]) groups[item.material] = [];
+        groups[item.material].push(item);
+        return groups;
+      }, {});
+    }
+
+    function sortedByMaterial(items) {
+      return [...items].sort((a, b) => a.material.localeCompare(b.material));
+    }
+
+    function sortedExperiments(items) {
+      return [...items].sort((a, b) => a.experiment.localeCompare(b.experiment));
+    }
+
+    function metricText(item) {
+      const value = item.mean_absolute_percent_difference;
+      if (typeof value !== "number" || Number.isNaN(value)) return "";
+      return `MAPE ${value.toFixed(2)}%`;
+    }
+
+    function materialSummary(items) {
+      const metricValues = items
+        .map((item) => item.mean_absolute_percent_difference)
+        .filter((value) => typeof value === "number" && !Number.isNaN(value));
+      const metric = metricValues.length ? `MAPE ${metricValues[0].toFixed(2)}%` : "";
+      return {
+        count: items.length,
+        metric,
+      };
+    }
+
+    function renderEmpty() {
+      document.getElementById("subtitle").textContent = "No generated results are present.";
+      document.getElementById("app").innerHTML = `
+        <div class="empty">
+          <h2>No Results Found</h2>
+          <p>Run <code>python compare.py --random-select 1 --random-seed 1</code> or another comparison command, then reload this page.</p>
+          <p style="margin-top: 12px;">If you just ran <code>./clean_results.sh</code>, this empty state is expected.</p>
+        </div>
+      `;
+    }
+
+    function button(label, className, onClick) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = className || "";
+      btn.textContent = label;
+      btn.addEventListener("click", onClick);
+      return btn;
+    }
+
+    function openLink(label, href) {
+      const link = document.createElement("a");
+      link.className = "button secondary";
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = label;
+      return link;
+    }
+
+    function makeWorkspace(title, actions) {
+      state.workspace.innerHTML = "";
+
+      const header = document.createElement("div");
+      header.className = "workspace-header";
+
+      const titleEl = document.createElement("h2");
+      titleEl.textContent = title;
+      header.appendChild(titleEl);
+
+      const actionBox = document.createElement("div");
+      actionBox.className = "workspace-actions";
+      for (const action of actions || []) actionBox.appendChild(action);
+      header.appendChild(actionBox);
+
+      const body = document.createElement("div");
+      body.className = "workspace-body";
+
+      state.workspace.appendChild(header);
+      state.workspace.appendChild(body);
+      return body;
+    }
+
+    function materialTile(material, items) {
+      const summary = materialSummary(items);
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "tile";
+      tile.innerHTML = `
+        <span class="tile-name"></span>
+        <span class="muted"></span>
+        ${summary.metric ? '<span class="metric"></span>' : ""}
+      `;
+      tile.querySelector(".tile-name").textContent = material;
+      tile.querySelector(".muted").textContent =
+        `${summary.count} experiment${summary.count === 1 ? "" : "s"}`;
+      const metric = tile.querySelector(".metric");
+      if (metric) metric.textContent = summary.metric;
+      tile.addEventListener("click", () => showMaterial(material));
+      return tile;
+    }
+
+    function renderMaterialTiles(container, heading, groups, emptyText) {
+      const panel = document.createElement("div");
+      panel.className = "panel";
+
+      const title = document.createElement("h3");
+      title.textContent = heading;
+      panel.appendChild(title);
+
+      const materials = Object.keys(groups).sort();
+      if (materials.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = emptyText;
+        panel.appendChild(empty);
+      } else {
+        const grid = document.createElement("div");
+        grid.className = "tile-grid";
+        for (const material of materials) {
+          grid.appendChild(materialTile(material, groups[material]));
+        }
+        panel.appendChild(grid);
+      }
+
+      container.appendChild(panel);
+    }
+
+    function showOverview() {
+      const manifest = state.manifest;
+      const elements = manifest.elements || [];
+      const materials = manifest.materials || [];
+      const body = makeWorkspace("Overview", []);
+
+      const overview = document.createElement("div");
+      overview.className = "overview-grid";
+
+      const periodicPanel = document.createElement("div");
+      periodicPanel.className = "panel";
+      const periodicHeading = document.createElement("h3");
+      periodicHeading.textContent = "Elements";
+      periodicPanel.appendChild(periodicHeading);
+
+      if (manifest.periodic_table) {
+        const frame = document.createElement("iframe");
+        frame.className = "periodic-frame";
+        frame.title = "Periodic table overview";
+        frame.src = manifest.periodic_table;
+        periodicPanel.appendChild(frame);
+      } else {
+        const empty = document.createElement("p");
+        empty.textContent = "No element results are present in this run.";
+        periodicPanel.appendChild(empty);
+      }
+
+      const rightColumn = document.createElement("div");
+      rightColumn.className = "panel-stack";
+      renderMaterialTiles(
+        rightColumn,
+        "Materials",
+        groupByMaterial(materials),
+        "No material results are present in this run.",
+      );
+
+      if (!manifest.periodic_table && elements.length > 0) {
+        renderMaterialTiles(
+          rightColumn,
+          "Element Results",
+          groupByMaterial(elements),
+          "No element results are present in this run.",
+        );
+      }
+
+      overview.appendChild(periodicPanel);
+      overview.appendChild(rightColumn);
+      body.appendChild(overview);
+    }
+
+    function showMaterial(material) {
+      const items = state.materialsByName.get(material);
+      if (!items) return;
+
+      const body = makeWorkspace(material, [
+        button("Overview", "secondary", showOverview),
+      ]);
+
+      const summary = materialSummary(items);
+      const meta = document.createElement("p");
+      meta.textContent = `${summary.count} experiment${summary.count === 1 ? "" : "s"}${summary.metric ? `, ${summary.metric}` : ""}`;
+      body.appendChild(meta);
+
+      const list = document.createElement("div");
+      list.className = "experiment-list";
+      list.style.marginTop = "14px";
+
+      for (const item of sortedExperiments(items)) {
+        const row = document.createElement("div");
+        row.className = "experiment-row";
+
+        const label = document.createElement("div");
+        const name = document.createElement("div");
+        name.className = "experiment-name";
+        name.textContent = item.experiment;
+        label.appendChild(name);
+
+        const metric = metricText(item);
+        if (metric) {
+          const metricEl = document.createElement("div");
+          metricEl.className = "metric";
+          metricEl.textContent = metric;
+          label.appendChild(metricEl);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "row-actions";
+        actions.appendChild(button("View", "", () => showPlot(item)));
+        actions.appendChild(openLink("Open", item.path));
+
+        row.appendChild(label);
+        row.appendChild(actions);
+        list.appendChild(row);
+      }
+
+      body.appendChild(list);
+    }
+
+    function showPlot(item) {
+      const body = makeWorkspace(`${item.material} ${item.experiment}`, [
+        button("Back to material", "secondary", () => showMaterial(item.material)),
+        button("Overview", "secondary", showOverview),
+        openLink("Open Current", item.path),
+      ]);
+
+      const frame = document.createElement("iframe");
+      frame.className = "plot-frame";
+      frame.title = `${item.material} ${item.experiment}`;
+      frame.src = item.path;
+      body.appendChild(frame);
+    }
+
+    function navGroup(container, heading, items) {
+      const group = document.createElement("div");
+      group.className = "nav-group";
+
+      const title = document.createElement("h3");
+      title.textContent = `${heading} (${items.length})`;
+      group.appendChild(title);
+
+      const grouped = groupByMaterial(items);
+      const list = document.createElement("div");
+      list.className = "nav-list";
+
+      for (const material of Object.keys(grouped).sort()) {
+        const summary = materialSummary(grouped[material]);
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "nav-item";
+        item.innerHTML = `
+          <span class="nav-name"></span>
+          <span class="muted"></span>
+        `;
+        item.querySelector(".nav-name").textContent = material;
+        item.querySelector(".muted").textContent =
+          summary.metric ? summary.metric : `${summary.count} exp`;
+        item.addEventListener("click", () => showMaterial(material));
+        list.appendChild(item);
+      }
+
+      group.appendChild(list);
+      container.appendChild(group);
+    }
+
+    function renderDashboard(manifest) {
+      const elements = manifest.elements || [];
+      const materials = manifest.materials || [];
+      const allResults = elements.concat(materials);
+
+      if (allResults.length === 0 && !manifest.periodic_table) {
+        renderEmpty();
+        return;
+      }
+
+      state.manifest = manifest;
+      state.materialsByName = new Map(
+        Object.entries(groupByMaterial(allResults)).map(([material, items]) => [
+          material,
+          sortedExperiments(items),
+        ]),
+      );
+
+      document.getElementById("subtitle").textContent =
+        `${allResults.length} experiment result(s), ${elements.length} element result(s), ${materials.length} material result(s).`;
+
+      state.app = document.getElementById("app");
+      state.app.innerHTML = "";
+
+      const nav = document.createElement("aside");
+      nav.innerHTML = `
+        <h2>Results</h2>
+        <p>${manifest.quantity || "comparison results"} generated with ${manifest.openmc_label || "OpenMC"}.</p>
+        <div class="summary">
+          <div class="stat"><strong>${elements.length}</strong><span>Elements</span></div>
+          <div class="stat"><strong>${materials.length}</strong><span>Materials</span></div>
+        </div>
+      `;
+
+      const overviewButton = button("Overview", "secondary", showOverview);
+      overviewButton.style.width = "100%";
+      nav.appendChild(overviewButton);
+      navGroup(nav, "Elements", sortedByMaterial(elements));
+      navGroup(nav, "Materials", sortedByMaterial(materials));
+
+      state.workspace = document.createElement("section");
+      state.workspace.className = "workspace";
+
+      state.app.appendChild(nav);
+      state.app.appendChild(state.workspace);
+      showOverview();
+    }
+
+    function loadManifest() {
+      const script = document.createElement("script");
+      script.src = "results/manifest.js?cacheBust=" + Date.now();
+      script.onload = () => renderDashboard(window.OPENMC_ACTIVATOR_RESULTS || {});
+      script.onerror = renderEmpty;
+      document.head.appendChild(script);
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = event.data || {};
+      if (data.type !== "openmc-activator-select-material") return;
+      if (!state.materialsByName.has(data.material)) return;
+      showMaterial(data.material);
+    });
+
+    loadManifest();
+  </script>
+</body>
+</html>

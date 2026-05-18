@@ -32,6 +32,7 @@
 
 # %%
 import argparse
+import json
 import multiprocessing as mp
 import random
 import shutil
@@ -145,7 +146,6 @@ if 'fork' in mp.get_all_start_methods():
     mp.set_start_method('fork', force=True)
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from urllib.request import urlopen, Request
 from zipfile import ZipFile
@@ -155,13 +155,62 @@ import pypact as pp  # needs latest version which can be installed with pip inst
 
 OPENMC_LABEL = f'OpenMC {openmc.__version__}'
 DECAY_START_INDEX = 1
+RESULTS_DIR = Path('results')
+RESULT_HTML_DIR = RESULTS_DIR / 'html'
+PERIODIC_TABLE_HTML = RESULT_HTML_DIR / 'periodic_table.html'
+PERIODIC_TABLE_CLICK_POST_SCRIPT = """
+const plot = document.getElementById('{plot_id}');
 
-# allows notebook rendering of plotly plots in the HTML made by jupyter-book
+function openmcActivatorTextAt(text, pointNumber) {
+  let value = text;
+  for (const index of pointNumber || []) {
+    if (!Array.isArray(value)) return null;
+    value = value[index];
+  }
+  return value;
+}
+
+function openmcActivatorElementSymbol(point) {
+  const values = [
+    point.text,
+    point.hovertext,
+    point.label,
+    point.data && Array.isArray(point.pointNumber)
+      ? openmcActivatorTextAt(point.data.text, point.pointNumber)
+      : null,
+    point.data && Array.isArray(point.pointNumber)
+      ? openmcActivatorTextAt(point.data.hovertext, point.pointNumber)
+      : null,
+  ];
+
+  for (const value of values) {
+    if (!value) continue;
+    const match = String(value).match(/\\(([A-Z][a-z]?)\\)/);
+    if (match) return match[1];
+  }
+
+  return null;
+}
+
+if (plot && plot.on) {
+  plot.on('plotly_click', function(event) {
+    const point = event && event.points && event.points[0];
+    if (!point || !window.parent || window.parent === window) return;
+
+    const material = openmcActivatorElementSymbol(point);
+    if (!material) return;
+
+    window.parent.postMessage({
+      type: 'openmc-activator-select-material',
+      material,
+    }, '*');
+  });
+}
+"""
+
 import plotly.graph_objects as go
-import plotly.offline as pyo
-pyo.init_notebook_mode(connected=True)
 
-from openmc_activator import OpenmcActivator, write_markdown_file, read_experimental_data
+from openmc_activator import OpenmcActivator, read_experimental_data
 
 # %% [markdown]
 # This downloads and extracts the CoNDERC data. This contains the FNS experimental data and FISPACT inputs and outputs.
@@ -209,23 +258,6 @@ for k,l in experiments.items():
         assert(len(ff.values) == 709)
         ebins = ff.boundaries
         flux_dict[k][exp] = ff.values
-
-# %% [markdown]
-# Plot and example irradiation neutron spectra.
-#
-# This example plots the neutron spectra used to irradiate silver (Ag) in the 2000 experimental campaign for 5 minutes of irradiation.
-
-# %%
-# In this case we plot the first selected experiment spectrum but you could plot others.
-example_material, example_exp = flatten_cases(experiments)[0]
-plt.stairs(values=flux_dict[example_material][example_exp], edges=np.array(ebins)/1e6)
-plt.yscale('log')
-plt.xlim(0, 16)
-plt.xlabel('Energy [MeV]')
-plt.ylabel(r'Flux [n$\cdot$cm$^{-2}\cdot$s$^{-1}$]')
-plt.title(f'{example_material} {example_exp}')
-plt.show()
-plt.close()
 
 # %% [markdown]
 # Next we read in the experimental data so that it is in a more accessible form.
@@ -458,43 +490,6 @@ for k,l in experiments.items():
 # %% [markdown]
 # We define some plotting functions that will be used later
 
-# %%
-def plot_with_matplotlib(
-    fispact_time,
-    fispact_results,
-    fispact_uncert,
-    openmc_time,
-    openmc_results,
-    material,
-    experiment,
-):
-        plt.plot(
-            openmc_time,
-            openmc_results,
-            label=f'{OPENMC_LABEL} absorbed-air (Gy/h)',
-            marker='x',
-            alpha=0.5,
-            color='red'
-        )
-        plt.errorbar(
-            fispact_time,
-            fispact_results,
-            fispact_uncert,
-            label='FISPACT II gamma dose rate (Sv/h)',
-            marker='o',
-            alpha=0.5,
-            color='blue'
-        )
-
-        plt.yscale('log')
-        plt.xlabel('Minutes')
-        plt.ylabel('Contact dose rate')
-        plt.legend()
-        plt.grid()
-        plt.title(f'{material} {experiment} contact dose rate')
-        plt.savefig(Path('docs') / f'{material}_{experiment}.png')
-        plt.close()
-
 def plot_with_plotly(
     fispact_time,
     fispact_results,
@@ -541,8 +536,10 @@ def plot_with_plotly(
         title=f"{material} {experiment} contact dose rate",
         template="plotly_white"
     )
-    Path('plotly_files').mkdir(exist_ok=True, parents=True)
-    fig.write_html(Path('plotly_files') / f'{material}_{experiment}.html')
+    RESULT_HTML_DIR.mkdir(exist_ok=True, parents=True)
+    html_path = RESULT_HTML_DIR / f'{material}_{experiment}.html'
+    fig.write_html(html_path)
+    return html_path
 
 # %% [markdown]
 # We now have the OpenMC contact dose rate and Fispact gamma dose rate in a convenient form ready for plotting.
@@ -550,6 +547,7 @@ def plot_with_plotly(
 # The next code block plots the results so that they can be compared.
 
 # %%
+generated_results = []
 for k,l in openmc_result_dict.items():
     for exp in l:
         fispact_time = np.array(fispact_result_dict[k][exp]['time'])
@@ -565,7 +563,7 @@ for k,l in openmc_result_dict.items():
         openmc_results = openmc_result_dict[k][exp]['contact_dose_rate']['meta_total']
         openmc_results = openmc_results[decay_indx:]
 
-        plot_with_plotly(
+        html_path = plot_with_plotly(
             fispact_time,
             fispact_results,
             fispact_uncert,
@@ -574,23 +572,13 @@ for k,l in openmc_result_dict.items():
             k,
             exp,
         )
-        plot_with_matplotlib(
-            fispact_time,
-            fispact_results,
-            fispact_uncert,
-            openmc_time,
-            openmc_results,
-            k,
-            exp,
-        )
-    # uncomment to write markdown files for each material, needed for local rendering of the jupyter book
-    write_markdown_file(
-        experiment_names=l,
-        material_name=k
-    )
+        generated_results.append({
+            'material': k,
+            'experiment': exp,
+            'path': html_path.as_posix(),
+        })
 
 # %%
-import json
 with open('openmc_result_dict.json', 'w') as f:
     json.dump(openmc_result_dict, f, indent=2)
 with open('exp_data_dict.json', 'w') as f:
@@ -615,6 +603,44 @@ def mean_absolute_percentage_error(experimental, simulated):
     simulated = np.array(simulated)
 
     return float(np.mean(np.abs((experimental - simulated) / experimental)) * 100)
+
+
+def write_result_manifest(generated_results, element_values, periodic_table_path=None):
+    element_symbols = set(openmc.data.ELEMENT_SYMBOL.values())
+    manifest = {
+        'title': 'OpenMC Activator Results',
+        'openmc_label': OPENMC_LABEL,
+        'quantity': 'contact dose rate',
+        'results_dir': RESULTS_DIR.as_posix(),
+        'periodic_table': periodic_table_path.as_posix() if periodic_table_path else None,
+        'elements': [],
+        'materials': [],
+    }
+
+    for result in sorted(generated_results, key=lambda item: (item['material'], item['experiment'])):
+        entry = {
+            'material': result['material'],
+            'experiment': result['experiment'],
+            'path': result['path'],
+        }
+        if result['material'] in element_values:
+            entry['mean_absolute_percent_difference'] = element_values[result['material']]
+
+        if result['material'] in element_symbols:
+            manifest['elements'].append(entry)
+        else:
+            manifest['materials'].append(entry)
+
+    RESULTS_DIR.mkdir(exist_ok=True, parents=True)
+    manifest_json = RESULTS_DIR / 'manifest.json'
+    manifest_js = RESULTS_DIR / 'manifest.js'
+    manifest_text = json.dumps(manifest, indent=2)
+    manifest_json.write_text(manifest_text + '\n', encoding='utf-8')
+    manifest_js.write_text(
+        'window.OPENMC_ACTIVATOR_RESULTS = ' + manifest_text + ';\n',
+        encoding='utf-8',
+    )
+
 
 element_values={}
 for k,l in openmc_result_dict.items():
@@ -643,8 +669,13 @@ if element_values:
         fmt=".2f",
     )
     fig.update_layout(title="OpenMC, FISPACT II contact dose rate mean absolute percent difference")
-    fig.write_html('plotly_files/overview_of_code_to_code_differences.html')
+    RESULT_HTML_DIR.mkdir(exist_ok=True, parents=True)
+    fig.write_html(PERIODIC_TABLE_HTML, post_script=PERIODIC_TABLE_CLICK_POST_SCRIPT)
+    periodic_table_path = PERIODIC_TABLE_HTML
 else:
     print('Skipping periodic table overview because no selected cases are element symbols.')
+    periodic_table_path = None
+
+write_result_manifest(generated_results, element_values, periodic_table_path)
 
 # %%

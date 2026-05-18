@@ -1,29 +1,28 @@
 # Install
 
-First clone or otherwise [download](https://github.com/jbae11/openmc_activator/archive/refs/heads/main.zip) the repository and cd into the director
+Clone the repository and enter it:
 
 ```bash
 git clone git@github.com:jbae11/openmc_activator.git
 cd openmc_activator
 ```
 
-Optionally create a new virtual environment
+The recommended setup uses the project conda installer. It builds OpenMC from the `develop` branch, downloads the TENDL-2017 nuclear data used by the benchmark, installs the Python dependencies, and configures `OPENMC_CROSS_SECTIONS` inside the conda environment.
 
 ```bash
-sudo apt-get --yes install python3-venv
-python3 -m venv .new_env
-source .new_env/bin/activate
+cd scripts
+./build_conda_activator_cdr.sh
 ```
 
-Next install the Python packages that are needed to run the notebook. These can be installed from the [requirements file](https://github.com/jbae11/openmc_activator/blob/main/requirements.txt).
+After the script completes, activate the environment:
 
-This includes a development version of OpenMC from [this branch](https://github.com/shimwell/openmc/tree/making-wheel-3) which allows Python wheels to be built.
-
-```
-pip install -r requirements.txt
+```bash
+conda activate openmc-activator-cdr
 ```
 
-You could alternatively [install OpenMC from source (develop branch needed)](https://docs.openmc.org/en/stable/usersguide/install.html#installing-from-source) and install the remaining requirements with
-```
-pip install -r requirements.txt
+Return to the repository root before running comparisons:
+
+```bash
+cd ..
+python compare.py --random-select 1 --random-seed 1
 ```

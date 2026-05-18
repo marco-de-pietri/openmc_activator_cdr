@@ -179,7 +179,7 @@ fns.zip
 fns/
 _build/
 *.png
-plotly_files/
+results/
 exp_data_dict.json
 fispact.json
 fispact_result_dict.json

@@ -1,31 +1,43 @@
 # Getting Started
 
-Run the `compare.ipynb` to perform the OpenMC simulations and compare them with precalculated FISPACT results and CoNDERC experimental data.
+Run `compare.py` to perform the OpenMC simulations and compare them with precalculated FISPACT results from the CoNDERC benchmark data.
 
-This can be run in several ways.
+Run all cases:
 
-- With Jupyter Lab
-    ```
-    jupyter lab compare.ipynb
-    ```
+```bash
+python compare.py
+```
 
-- With Jupyter
-    ```
-    jupyter notebook compare.ipynb
-    ```
+Run a small deterministic subset:
 
-- With VS Code, assuming you have the Jupyter extension installed
-    ```
-    code compare.ipynb 
-    ```
+```bash
+python compare.py --random-select 1 --random-seed 1
+```
 
-- Convert it to a python file and run with Python
-    ```
-    jupyter nbconvert compare.ipynb --to python
-    python compare.py
-    ```
+Run selected materials:
 
-- Build the book with Jupyter books.
-    ```
-    jupyter-book build .
-    ```
+```bash
+python compare.py --materials Fe SS304 SS316
+```
+
+Run selected experiment campaigns:
+
+```bash
+python compare.py --experiments 2000exp_5min
+```
+
+The script writes interactive plots to `results/html/`, generated dashboard metadata to `results/`, and raw JSON summaries to the repository root.
+
+Open the root `overview.html` file in a browser to navigate the generated element and material results.
+
+To remove generated results while preserving nuclear data and extracted benchmark inputs:
+
+```bash
+./clean_results.sh
+```
+
+Build the Jupyter Book with:
+
+```bash
+jupyter-book build .
+```
