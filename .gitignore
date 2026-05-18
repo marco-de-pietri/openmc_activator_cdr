@@ -179,7 +179,6 @@ fns.zip
 fns/
 _build/
 *.png
-compare.py
 plotly_files/
 exp_data_dict.json
 fispact.json
